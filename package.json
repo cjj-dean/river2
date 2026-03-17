@@ -1,0 +1,22 @@
+{
+  "name": "novel-setting-editor",
+  "version": "1.0.0",
+  "description": "小说设定集管理 MCP Server - 多智能体设定冲突检测与知识图谱补全",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "novel-setting-server": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node src/test.js"
+  },
+  "keywords": ["mcp", "novel", "setting", "ai", "agent"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.79.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  }
+}
