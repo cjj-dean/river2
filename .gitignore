@@ -2,7 +2,3 @@ node_modules/
 .env
 *.log
 .DS_Store
-settings/*.md
-!settings/世界观.md
-!settings/流派和等级体系.md
-!settings/历史事件时间线.md
