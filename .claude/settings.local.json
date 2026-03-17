@@ -13,7 +13,11 @@
       "Bash(git config:*)",
       "Bash(git remote:*)",
       "Bash(git branch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(for file:*)",
+      "Bash(do echo:*)",
+      "Read(//d/claude/novel-setting-editor/**)",
+      "Bash(done)"
     ]
   }
 }
