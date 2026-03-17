@@ -7,6 +7,7 @@
 - **设定提议**: 根据用户需求自动生成详细的设定草案
 - **多维度审查**: 通过战力、经济、时间线等多个专业 Agent 检测设定冲突
 - **智能整合**: 自动将审查通过的设定写入对应的 Markdown 文件
+- **一致性检查**: 自动检测文档修改后需要同步的关联文档
 - **MCP 集成**: 可在 Claude Code 等支持 MCP 的工具中直接使用
 
 ## 工作流程
@@ -68,8 +69,11 @@ export ANTHROPIC_API_KEY=your_api_key_here
    - `review_setting`: 审查设定草案
    - `commit_setting`: 提交设定到文件
    - `list_settings`: 列出所有设定文件
+   - `check_consistency`: 检查文档一致性（新功能）
 
 ## 使用示例
+
+### 示例1：添加新设定
 
 在 Claude Code 中：
 
@@ -82,6 +86,22 @@ export ANTHROPIC_API_KEY=your_api_key_here
 2. 调用 `review_setting` 进行多维度审查
 3. 根据审查结果修改草案
 4. 调用 `commit_setting` 将设定写入相关文件
+
+### 示例2：检查文档一致性
+
+修改"主角成长路线图.md"后，运行一致性检查：
+
+```bash
+node test-consistency.js
+```
+
+系统会：
+1. 提取文档中的角色、功法、法宝等实体
+2. 检查关联文档（主要角色、功法术法、法宝图鉴等）
+3. 检测境界不一致、功法描述冲突等问题
+4. 生成同步建议报告
+
+详细使用方法请参考：[一致性检查使用指南](./docs/一致性检查使用指南.md)
 
 ## 技术架构
 

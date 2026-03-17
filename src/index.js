@@ -17,6 +17,7 @@ import {
 import { SettingManager } from './utils/settingManager.js';
 import { RouterAgent } from './agents/routerAgent.js';
 import { ReviewCoordinator } from './agents/reviewCoordinator.js';
+import { ConsistencyAgent } from './agents/consistencyAgent.js';
 
 class NovelSettingServer {
   constructor() {
@@ -36,6 +37,7 @@ class NovelSettingServer {
     this.settingManager = new SettingManager();
     this.routerAgent = new RouterAgent(this.settingManager);
     this.reviewCoordinator = new ReviewCoordinator(this.settingManager);
+    this.consistencyAgent = new ConsistencyAgent(this.settingManager);
 
     this.setupHandlers();
   }
@@ -101,6 +103,24 @@ class NovelSettingServer {
           inputSchema: {
             type: 'object',
             properties: {},
+          },
+        },
+        {
+          name: 'check_consistency',
+          description: '检查文档修改后需要同步的关联文档',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              modifiedFile: {
+                type: 'string',
+                description: '被修改的文件名（如：主角成长路线图.md）',
+              },
+              modifiedContent: {
+                type: 'string',
+                description: '修改后的文件内容',
+              },
+            },
+            required: ['modifiedFile', 'modifiedContent'],
           },
         },
       ],
@@ -189,6 +209,22 @@ class NovelSettingServer {
                 {
                   type: 'text',
                   text: JSON.stringify({ files }, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'check_consistency': {
+            const result = await this.consistencyAgent.checkConsistency(
+              args.modifiedFile,
+              args.modifiedContent
+            );
+            const report = this.consistencyAgent.generateSyncReport(result);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ ...result, report }, null, 2),
                 },
               ],
             };
