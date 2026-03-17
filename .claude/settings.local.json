@@ -17,7 +17,8 @@
       "Bash(for file:*)",
       "Bash(do echo:*)",
       "Read(//d/claude/novel-setting-editor/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(cd:*)"
     ]
   }
 }
