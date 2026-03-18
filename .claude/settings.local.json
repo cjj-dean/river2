@@ -18,7 +18,10 @@
       "Bash(do echo:*)",
       "Read(//d/claude/novel-setting-editor/**)",
       "Bash(done)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Read(//d/tmp/**)",
+      "Bash(python add_wiki_links.py)",
+      "Bash(python:*)"
     ]
   }
 }
