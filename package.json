@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "test": "node src/test.js"
+    "test": "node src/test.js",
+    "map": "node src/geoMap/server.js"
   },
   "keywords": ["mcp", "novel", "setting", "ai", "agent"],
   "author": "",
