@@ -120,12 +120,14 @@ def infer_type(title, metadata):
         return "港口城市"
     if title.endswith("城") or title.endswith("镇"):
         return "城市"
-    if title.endswith("山") or title.endswith("峰") or title.endswith("崖"):
-        return "山地"
+    if title.endswith("山") or title.endswith("峰") or title.endswith("崖") or title.endswith("脉"):
+        return "山脉"
     if title.endswith("谷"):
         return "工坊城"
-    if title.endswith("海"):
+    if title.endswith("海") or title.endswith("洋"):
         return "海域"
+    if title.endswith("河") or title.endswith("江") or title.endswith("川") or title.endswith("湖"):
+        return "水脉"
     if title.endswith("岛"):
         return "岛屿"
     return "地域"
@@ -178,7 +180,7 @@ def infer_prosperity(geo_type, metadata):
     existing = parse_number(metadata.get("繁荣度") or metadata.get("繁华度") or metadata.get("富庶度"))
     if existing is not None:
         return int(max(0, min(100, round(existing))))
-    defaults = {"大陆": 70, "港口城市": 76, "城市": 72, "主城": 88, "工坊城": 73, "禁地": 18, "险地": 28, "山地": 46, "海域": 50, "岛屿": 56, "地域": 60}
+    defaults = {"大陆": 70, "港口城市": 76, "城市": 72, "主城": 88, "工坊城": 73, "禁地": 18, "险地": 28, "山脉": 46, "山地": 46, "海域": 50, "水脉": 55, "岛屿": 56, "地域": 60}
     return defaults.get(geo_type, 60)
 
 
@@ -190,6 +192,8 @@ def default_relative_radius(node):
         return 0.18
     if "海" in t:
         return 0.22
+    if "山" in t or "水" in t or "河" in t or "江" in t:
+        return 0.16
     if "城市" in t or "城" in t or "港" in t:
         return 0.13
     if "禁地" in t or "险地" in t:
@@ -212,6 +216,150 @@ def build_circle_boundary(cx, cy, radius, points=40):
         a = (2 * math.pi * i) / points
         boundary.append([round(cx + math.cos(a) * radius, 2), round(cy + math.sin(a) * radius, 2)])
     return boundary
+
+
+def build_ellipse_boundary(cx, cy, radius, geo_type, seed_val, points=40):
+    rng = random.Random(seed_val)
+    angle_offset = rng.random() * math.pi
+    
+    # 狭长的比例，长轴放大，短轴缩小，保持面积大致相当或稍大
+    rx = radius * 1.6
+    ry = radius * 0.4
+    
+    boundary = []
+    for i in range(points):
+        a = (2 * math.pi * i) / points
+        x0 = math.cos(a) * rx
+        y0 = math.sin(a) * ry
+        
+        # 增加一些边缘的随机褶皱
+        noise = 1.0
+        if geo_type == "山脉":
+            noise = 1.0 + (rng.random() - 0.5) * 0.4  # 山脉比较崎岖
+            
+        x0 *= noise
+        y0 *= noise
+        
+        x = cx + x0 * math.cos(angle_offset) - y0 * math.sin(angle_offset)
+        y = cy + x0 * math.sin(angle_offset) + y0 * math.cos(angle_offset)
+        boundary.append([round(x, 2), round(y, 2)])
+    return boundary
+
+
+def build_river_network(cx, cy, radius, seed_val, px, py, parent_name, by_name):
+    rng = random.Random(seed_val)
+    
+    # 尝试寻找同一父级下（或地图上）的山脉作为源头
+    source_mountain = None
+    mountains = []
+    parent_radius = WORLD_RADIUS
+    
+    # 获取所有同属一个父级的节点，寻找山脉，并获取父级半径
+    if parent_name in by_name:
+        parent_node = by_name[parent_name]
+        parent_radius = parent_node.get("radius", WORLD_RADIUS)
+        mountains = [c for c in parent_node.get("children", []) if c["type"] == "山脉"]
+        
+    if mountains:
+        # 选择距离最近的山脉作为发源地
+        source_mountain = min(mountains, key=lambda m: math.hypot(m["x"] - cx, m["y"] - cy))
+        
+    if source_mountain:
+        # 从选定山脉的中心或边缘发源
+        start_x = source_mountain["x"]
+        start_y = source_mountain["y"]
+        # 流向：从大洲中心向外辐射，或者从山脉向远离大洲中心的方向流，一直流到大洲边缘（大海）
+        # 这里计算从大洲中心(px, py)经过山脉(start_x, start_y)的射线方向
+        dx_out, dy_out = start_x - px, start_y - py
+        if abs(dx_out) < 1e-4 and abs(dy_out) < 1e-4:
+            theta = rng.random() * 2 * math.pi
+        else:
+            theta = math.atan2(dy_out, dx_out)
+        
+        # 让水脉中心也稍微影响一下方向，使它看起来像是流经水脉所在的区域
+        dx_to_center, dy_to_center = cx - start_x, cy - start_y
+        if abs(dx_to_center) > 1e-4 or abs(dy_to_center) > 1e-4:
+            theta_to_center = math.atan2(dy_to_center, dx_to_center)
+            # 混合方向，以向外流为主，向水脉中心流为辅
+            # 如果两个角度差异过大，需要处理跨越 -pi/pi 的情况
+            diff = (theta_to_center - theta + math.pi) % (2 * math.pi) - math.pi
+            theta += diff * 0.3 # 30% 向水脉中心偏转
+            
+        # 长度足够长，确保能流到父级边界（大陆边缘）
+        dist_from_parent_center = math.hypot(start_x - px, start_y - py)
+        river_length = parent_radius - dist_from_parent_center + radius * 0.5
+    else:
+        # 如果没有找到山脉，回退到原来的逻辑：靠近父级中心发源，向外流到边缘
+        dx, dy = cx - px, cy - py
+        if abs(dx) < 1e-4 and abs(dy) < 1e-4:
+            theta = rng.random() * 2 * math.pi
+        else:
+            theta = math.atan2(dy, dx)
+        start_x = px + math.cos(theta) * (parent_radius * 0.2)
+        start_y = py + math.sin(theta) * (parent_radius * 0.2)
+        dist_from_parent_center = math.hypot(start_x - px, start_y - py)
+        river_length = parent_radius - dist_from_parent_center + radius * 0.5
+
+    segments = []
+    base_width = max(1.0, radius * 0.08)
+    # queue: (x, y, angle, length_left, width, depth)
+    queue = [(start_x, start_y, theta, river_length, base_width, 0)]
+
+    while queue:
+        x, y, ang, length, width, depth = queue.pop(0)
+        if length <= 0 or depth >= 5:
+            continue
+
+        # 决定这一段的长度
+        seg_len = length if depth == 4 else (length * rng.uniform(0.3, 0.5))
+        points = [[round(x, 2), round(y, 2)]]
+        steps = max(4, int(seg_len / max(1.0, radius * 0.1)))
+        step_len = seg_len / steps
+        
+        curr_x, curr_y = x, y
+        curr_ang = ang
+        
+        # 越往下游，河流越粗
+        target_width = width + base_width * rng.uniform(0.4, 0.8)
+        avg_width = (width + target_width) / 2
+        
+        for i in range(steps):
+            curr_ang += rng.uniform(-0.5, 0.5)
+            curr_ang += (ang - curr_ang) * 0.3  # 拉回主方向
+            curr_x += math.cos(curr_ang) * step_len
+            curr_y += math.sin(curr_ang) * step_len
+            points.append([round(curr_x, 2), round(curr_y, 2)])
+        
+        segments.append({
+            "points": points,
+            "width": round(avg_width, 2)
+        })
+        
+        rem_len = length - seg_len
+        if rem_len > 0:
+            # 越往下游，支脉越多（但最多不超过3条，主脉算1条）
+            if depth == 0:
+                num_branches = rng.choices([1, 2], weights=[0.8, 0.2])[0]
+            elif depth == 1:
+                num_branches = rng.choices([1, 2], weights=[0.4, 0.6])[0]
+            else:
+                num_branches = rng.choices([2, 3], weights=[0.6, 0.4])[0]
+                
+            for i in range(num_branches):
+                # 确保支脉和主脉有明显的方向偏移 (0.5 到 1.2 弧度，约 30 到 70 度)
+                if num_branches == 1:
+                    branch_ang = curr_ang + rng.uniform(-0.2, 0.2) # 只有一条时主要是延续
+                else:
+                    # 如果有多条，强行错开角度
+                    direction = 1 if i % 2 == 0 else -1
+                    offset = rng.uniform(0.5, 1.2) * direction
+                    branch_ang = curr_ang + offset
+                    
+                # 支流宽度继承主干并略微变细或保持
+                branch_width = target_width * rng.uniform(0.6, 0.9)
+                queue.append((curr_x, curr_y, branch_ang, rem_len, branch_width, depth + 1))
+
+    return segments
 
 
 def build_cards():
@@ -295,74 +443,103 @@ def solve_layout(nodes):
         pr = parent["radius"]
         if len(children) == 1:
             c = children[0]
-            c["radius"] = round(pr * 0.92, 2)
+            # 保证唯一子节点的面积接近父节点面积 (半径接近父节点半径)
+            c["radius"] = round(pr * 0.98, 2)
             c["x"] = parent["x"]
             c["y"] = parent["y"]
             continue
+            
         rng = random.Random(stable_hash(parent["name"]))
-        center_index = stable_hash(parent["name"] + "#center") % len(children)
-        center_child = children[center_index]
-        others = [c for i, c in enumerate(children) if i != center_index]
-        k = len(children)
-        base_ratio = min(0.38, 0.95 / math.sqrt(k + 2))
-        base_r = max(1.0, pr * base_ratio)
-        center_r = max(1.0, base_r / 1.45)
+        
+        # 目标：所有子节点的面积之和要尽量等于父节点面积
+        # 设总面积 = math.pi * pr^2，留出10%的空隙，目标子节点总面积约为 0.9 * parent_area
+        target_total_area = math.pi * (pr ** 2) * 0.9
+        
+        # 为每个子节点分配基础权重
+        weights = []
+        for c in children:
+            # 可以根据繁荣度或类型给不同的初始权重，这里暂时给相近的随机权重
+            w = rng.uniform(0.5, 1.5)
+            # 大陆、海域、核心地理屏障等可以赋予更大权重
+            if c["type"] in ["大陆", "海域", "核心地理屏障"]:
+                w *= 2.0
+            weights.append(w)
+            
+        total_weight = sum(weights)
+        
+        # 根据权重分配面积，并反推半径
+        for i, c in enumerate(children):
+            c_area = target_total_area * (weights[i] / total_weight)
+            c["radius"] = round(math.sqrt(c_area / math.pi), 2)
+            
+        # 布局：将最大的子节点放在中间，其余环绕
+        children_sorted = sorted(children, key=lambda x: x["radius"], reverse=True)
+        center_child = children_sorted[0]
+        others = children_sorted[1:]
+        
         center_child["x"] = parent["x"]
         center_child["y"] = parent["y"]
-        center_child["radius"] = round(center_r, 2)
+        
         if not others:
             continue
-        outer_r = base_r
+            
         placed = False
-        gap = 1.2
+        gap = max(2.0, pr * 0.02)
+        
+        # 尝试多次放置
         for _ in range(24):
             positions = []
             failed = False
             for child in others:
                 ok = False
-                for _ in range(260):
+                for _ in range(300):
                     angle = rng.random() * 2 * math.pi
-                    max_d = max(0.0, pr - outer_r - gap)
-                    d = math.sqrt(rng.random()) * max_d
+                    # 距离中心的距离范围：从 center_child 的边缘到父级边缘
+                    min_d = center_child["radius"] + child["radius"] + gap
+                    max_d = max(min_d, pr - child["radius"] - gap)
+                    
+                    if max_d < min_d:
+                        # 父级空间太小，强行放置
+                        d = min_d
+                    else:
+                        d = min_d + rng.random() * (max_d - min_d)
+                        
                     x = parent["x"] + math.cos(angle) * d
                     y = parent["y"] + math.sin(angle) * d
-                    if math.hypot(x - parent["x"], y - parent["y"]) + outer_r > pr - 1e-6:
-                        continue
-                    if math.hypot(x - center_child["x"], y - center_child["y"]) < outer_r + center_r + gap:
-                        continue
+                    
+                    # 检查是否与已放置的节点冲突
                     bad = False
-                    for px, py in positions:
-                        if math.hypot(x - px, y - py) < outer_r + outer_r + gap:
+                    for px, py, pradius in positions:
+                        if math.hypot(x - px, y - py) < child["radius"] + pradius + gap:
                             bad = True
                             break
                     if bad:
                         continue
-                    positions.append((x, y))
+                    positions.append((x, y, child["radius"]))
                     ok = True
                     break
                 if not ok:
                     failed = True
                     break
             if not failed:
-                for child, (x, y) in zip(others, positions):
-                    child["radius"] = round(outer_r, 2)
+                for child, (x, y, _) in zip(others, positions):
                     child["x"] = round(x, 2)
                     child["y"] = round(y, 2)
                 placed = True
                 break
-            outer_r *= 0.92
-            center_r = max(1.0, outer_r / 1.45)
-            center_child["radius"] = round(center_r, 2)
+            
+            # 如果放置失败，稍微缩小所有子节点（除了中心节点）的半径重试
+            for c in others:
+                c["radius"] = max(1.0, c["radius"] * 0.9)
+                
         if not placed:
+            # 如果随机放置失败，强制环状排列
             m = len(others)
-            ring_d = max(center_r + outer_r + gap, pr - outer_r - gap)
-            ring_d = min(ring_d, pr - outer_r - gap)
-            base_angle = math.radians(stable_hash(parent["name"]) % 360)
             for i, child in enumerate(others):
-                a = base_angle + (2 * math.pi * i) / m
-                child["radius"] = round(outer_r, 2)
-                child["x"] = round(parent["x"] + math.cos(a) * ring_d, 2)
-                child["y"] = round(parent["y"] + math.sin(a) * ring_d, 2)
+                a = (2 * math.pi * i) / m
+                d = center_child["radius"] + child["radius"] + gap
+                child["x"] = round(parent["x"] + math.cos(a) * d, 2)
+                child["y"] = round(parent["y"] + math.sin(a) * d, 2)
 
     sibling_groups = {}
     for n in nodes:
@@ -383,10 +560,20 @@ def solve_layout(nodes):
     for n in nodes:
         p = by_name.get(n["parent"])
         parent_radius = WORLD_RADIUS if not p else p["radius"]
+        px = p["x"] if p else WORLD_CENTER[0]
+        py = p["y"] if p else WORLD_CENTER[1]
         n["relRadius"] = max(0.0001, n["radius"] / parent_radius)
-        n["relCoord"] = ((n["x"] - (WORLD_CENTER[0] if not p else p["x"])) / parent_radius * 100, ((WORLD_CENTER[1] if not p else p["y"]) - n["y"]) / parent_radius * 100)
+        n["relCoord"] = ((n["x"] - px) / parent_radius * 100, (py - n["y"]) / parent_radius * 100)
         n["boundaryRadius"] = round(n["radius"], 2)
-        n["boundary"] = build_circle_boundary(n["x"], n["y"], n["radius"])
+        
+        n["riverSegments"] = []
+        if n["type"] in ["水脉", "河流"]:
+            n["riverSegments"] = build_river_network(n["x"], n["y"], n["radius"], stable_hash(n["name"]), px, py, n["parent"], by_name)
+            n["boundary"] = []
+        elif n["type"] == "山脉":
+            n["boundary"] = build_ellipse_boundary(n["x"], n["y"], n["radius"], n["type"], stable_hash(n["name"]))
+        else:
+            n["boundary"] = build_circle_boundary(n["x"], n["y"], n["radius"])
 
     return nodes
 
@@ -488,6 +675,11 @@ def build_geo_data():
 
     api_nodes = []
     for n in nodes:
+        try:
+            content = n["file_path"].read_text(encoding="utf-8")
+        except Exception:
+            content = "无法读取文件内容"
+            
         api_nodes.append({
             "id": n["name"],
             "name": n["name"],
@@ -499,10 +691,12 @@ def build_geo_data():
             "radius": round(n["radius"], 2),
             "boundaryRadius": n["boundaryRadius"],
             "boundary": n["boundary"],
+            "riverSegments": n.get("riverSegments", []),
             "relativeCoord": [round(n["relCoord"][0], 4), round(n["relCoord"][1], 4)],
             "relativeRadius": round(n["relRadius"], 6),
             "levelDepth": depth_of(n["name"]),
             "relativePath": n["file_path"].relative_to(GEO_ROOT).as_posix(),
+            "content": content,
         })
 
     return {
@@ -572,8 +766,8 @@ def validate():
         parent = by_name[parent_name]
         child_area = sum(math.pi * (node["radius"] ** 2) for node in siblings)
         parent_area = math.pi * (parent["radius"] ** 2)
-        if parent_area > 0 and child_area / parent_area < 0.12:
-            errors.append(f"{parent_name}: 子节点面积占比不足12%")
+        if parent_area > 0 and child_area / parent_area < 0.80:
+            errors.append(f"{parent_name}: 子节点面积占比不足80%")
 
     if all(name in by_name for name in MAINLANDS):
         top_level = [n for n in graph["nodes"] if n["parent"] == TOP_PARENT]

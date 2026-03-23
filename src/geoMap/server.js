@@ -29,23 +29,31 @@ function mapHtml() {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>地理地图</title>
   <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b1020; color: #e5e7eb; }
-    header { padding: 12px 16px; border-bottom: 1px solid #24324b; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .title { font-size: 18px; font-weight: 600; }
-    .meta { color: #9ca3af; font-size: 12px; }
-    .toolbar { display: flex; gap: 8px; align-items: center; }
-    input { background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 8px; padding: 6px 10px; width: 220px; }
-    button { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
-    #canvas { width: 100vw; height: calc(100vh - 58px); overflow: hidden; position: relative; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; background: #f5f5f7; color: #1d1d1f; -webkit-font-smoothing: antialiased; }
+    header { padding: 16px 24px; background: rgba(255, 255, 255, 0.8); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; position: relative; z-index: 10; }
+    .title { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+    .meta { color: #86868b; font-size: 13px; margin-top: 2px; }
+    .toolbar { display: flex; gap: 12px; align-items: center; }
+    input { background: #fff; color: #1d1d1f; border: 1px solid #d2d2d7; border-radius: 18px; padding: 8px 16px; width: 240px; font-size: 14px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    input:focus { border-color: #0071e3; box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1); }
+    button { background: #0071e3; color: #fff; border: none; border-radius: 18px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+    button:hover { background: #0077ed; }
+    button:active { transform: scale(0.96); }
+    #canvas { width: 100vw; height: calc(100vh - 65px); overflow: hidden; position: relative; background: #f5f5f7; }
     svg { width: 100%; height: 100%; display: block; }
     .node { cursor: pointer; }
-    .node text { font-size: 12px; fill: #e5e7eb; pointer-events: none; }
-    .edge-parent { stroke: #60a5fa; stroke-width: 1.5; opacity: .7; }
-    .edge-reference { stroke: #94a3b8; stroke-width: 1; opacity: .35; stroke-dasharray: 4 3; }
-    .panel { position: absolute; top: 14px; right: 14px; width: 320px; max-height: calc(100% - 28px); overflow: auto; background: rgba(17,24,39,.92); border: 1px solid #374151; border-radius: 10px; padding: 12px; }
-    .panel h3 { margin: 0 0 8px; font-size: 14px; }
-    .panel pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; color: #cbd5e1; margin: 0; }
-    .tag { display: inline-block; font-size: 11px; border-radius: 999px; padding: 2px 8px; margin-right: 6px; margin-bottom: 6px; background: #1f2937; border: 1px solid #374151; }
+    .node text { font-size: 13px; font-weight: 500; fill: #1d1d1f; pointer-events: none; letter-spacing: -0.01em; text-shadow: 0 1px 2px rgba(255,255,255,0.8), 0 0 4px rgba(255,255,255,0.6); }
+    .edge-parent { stroke: #0071e3; stroke-width: 1.5; opacity: .4; }
+    .edge-reference { stroke: #86868b; stroke-width: 1; opacity: .3; stroke-dasharray: 4 4; }
+    .panel { position: absolute; top: 20px; right: 20px; width: 440px; max-height: calc(100% - 40px); overflow: auto; background: rgba(255, 255, 255, 0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border: 1px solid rgba(0, 0, 0, 0.1); border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 1px 8px rgba(0, 0, 0, 0.04); }
+    .panel h3 { margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #1d1d1f; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; letter-spacing: -0.015em; display: flex; justify-content: space-between; align-items: center; }
+    .close-btn { background: rgba(0,0,0,0.05); color: #86868b; border: none; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s; padding: 0; line-height: 1; }
+    .close-btn:hover { background: rgba(0,0,0,0.1); color: #1d1d1f; }
+    .panel pre { white-space: pre-wrap; word-break: break-word; font-size: 13px; color: #333336; margin: 0; line-height: 1.6; font-family: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace; }
+    .panel pre::-webkit-scrollbar { width: 8px; }
+    .panel pre::-webkit-scrollbar-track { background: transparent; }
+    .panel pre::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+    .tag { display: inline-block; font-size: 12px; font-weight: 500; border-radius: 12px; padding: 4px 10px; margin-right: 8px; margin-bottom: 8px; background: #f2f2f7; border: 1px solid rgba(0,0,0,0.05); color: #1d1d1f; }
   </style>
 </head>
 <body>
@@ -60,23 +68,27 @@ function mapHtml() {
     </div>
   </header>
   <div id="canvas">
-    <svg id="svg" viewBox="-900 -700 1800 1400">
+    <svg id="svg" viewBox="-1200 -1200 2400 2400">
+      <g id="regionLayer"></g>
       <g id="edgeLayer"></g>
       <g id="nodeLayer"></g>
     </svg>
-    <aside class="panel" id="panel">
-      <h3>节点详情</h3>
+    <aside class="panel" id="panel" style="display: none;">
+      <h3><span>节点详情</span><button class="close-btn" id="closePanelBtn">&times;</button></h3>
       <pre id="detail">点击任一地点查看详情</pre>
     </aside>
   </div>
   <script>
     const svg = document.getElementById('svg');
+    const regionLayer = document.getElementById('regionLayer');
     const edgeLayer = document.getElementById('edgeLayer');
     const nodeLayer = document.getElementById('nodeLayer');
     const detail = document.getElementById('detail');
     const meta = document.getElementById('meta');
     const keywordInput = document.getElementById('keyword');
     const refreshBtn = document.getElementById('refreshBtn');
+    const panel = document.getElementById('panel');
+    const closePanelBtn = document.getElementById('closePanelBtn');
 
     let graph = { nodes: [], edges: [] };
     let highlighted = null;
@@ -85,47 +97,65 @@ function mapHtml() {
     let dragStart = null;
 
     const typeColor = new Map([
-      ['大陆', '#22d3ee'],
-      ['洲', '#22d3ee'],
-      ['城池', '#a78bfa'],
-      ['城市', '#a78bfa'],
-      ['山脉', '#f59e0b'],
-      ['海域', '#34d399'],
-      ['未分类', '#94a3b8'],
+      ['大陆', '#0071e3'],
+      ['洲', '#0071e3'],
+      ['城池', '#5e5ce6'],
+      ['城市', '#5e5ce6'],
+      ['山脉', '#ff9f0a'],
+      ['水脉', '#0a84ff'],
+      ['河流', '#0a84ff'],
+      ['湖泊', '#0a84ff'],
+      ['海域', '#0a84ff'],
+      ['未分类', '#86868b'],
     ]);
 
     function colorByType(type) {
-      if (!type) return '#94a3b8';
+      if (!type) return '#86868b';
       for (const [k, v] of typeColor.entries()) {
         if (type.includes(k)) return v;
       }
-      return '#60a5fa';
+      return '#32ade6';
     }
 
     function setViewTransform() {
       const tx = pan.x;
       const ty = pan.y;
       const s = pan.scale;
+      regionLayer.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + s + ')');
       edgeLayer.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + s + ')');
       nodeLayer.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + s + ')');
     }
 
     function render() {
+      regionLayer.innerHTML = '';
       edgeLayer.innerHTML = '';
       nodeLayer.innerHTML = '';
       const nodeIndex = new Map(graph.nodes.map(n => [n.id, n]));
 
-      graph.edges.forEach(edge => {
-        const source = nodeIndex.get(edge.source);
-        const target = nodeIndex.get(edge.target);
-        if (!source || !target) return;
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', source.x);
-        line.setAttribute('y1', source.y);
-        line.setAttribute('x2', target.x);
-        line.setAttribute('y2', target.y);
-        line.setAttribute('class', edge.kind === 'parent' ? 'edge-parent' : 'edge-reference');
-        edgeLayer.appendChild(line);
+      graph.nodes.forEach(node => {
+        if (node.riverSegments && node.riverSegments.length > 0) {
+          node.riverSegments.forEach(seg => {
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            p.setAttribute('points', seg.points.map(k => k[0] + ',' + k[1]).join(' '));
+            p.setAttribute('fill', 'none');
+            p.setAttribute('stroke', colorByType(node.type));
+            p.setAttribute('stroke-opacity', '0.85');
+            const baseWidth = node.levelDepth <= 1 ? 1.5 : 1;
+            p.setAttribute('stroke-width', String(seg.width * baseWidth));
+            p.setAttribute('stroke-linecap', 'round');
+            p.setAttribute('stroke-linejoin', 'round');
+            regionLayer.appendChild(p);
+          });
+        } else if (node.boundary && node.boundary.length > 0) {
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          p.setAttribute('points', node.boundary.map(k => k[0] + ',' + k[1]).join(' '));
+          p.setAttribute('fill', colorByType(node.type));
+          p.setAttribute('fill-opacity', node.levelDepth <= 2 ? '0.08' : '0.04');
+          p.setAttribute('stroke', colorByType(node.type));
+          p.setAttribute('stroke-opacity', '0.6');
+          p.setAttribute('stroke-width', node.levelDepth <= 1 ? '2.5' : '1');
+          regionLayer.appendChild(p);
+        }
       });
 
       graph.nodes.forEach(node => {
@@ -134,10 +164,13 @@ function mapHtml() {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', node.x);
         circle.setAttribute('cy', node.y);
-        circle.setAttribute('r', highlighted === node.id ? 14 : 10);
+        circle.setAttribute('r', highlighted === node.id ? 12 : 8);
         circle.setAttribute('fill', colorByType(node.type));
-        circle.setAttribute('stroke', highlighted === node.id ? '#f8fafc' : '#1f2937');
-        circle.setAttribute('stroke-width', highlighted === node.id ? 2.4 : 1.2);
+        circle.setAttribute('stroke', highlighted === node.id ? '#0071e3' : '#fff');
+        circle.setAttribute('stroke-width', highlighted === node.id ? 3 : 2);
+        if (highlighted === node.id) {
+          circle.setAttribute('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))');
+        }
         g.appendChild(circle);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -148,6 +181,7 @@ function mapHtml() {
 
         g.addEventListener('click', () => {
           highlighted = node.id;
+          panel.style.display = 'block';
           showDetail(node);
           render();
         });
@@ -161,8 +195,11 @@ function mapHtml() {
         '类型: ' + (node.type || '未分类'),
         '父级: ' + (node.parent || '-'),
         '繁荣度: ' + (node.prosperity ?? '-'),
-        '坐标来源: ' + (node.isManual ? '卡片坐标' : '自动布局'),
-        '卡片路径: settings/卡片/地理/' + node.relativePath,
+        '面积半径: ' + (node.radius ? node.radius.toFixed(2) : '-'),
+        '相对半径: ' + (node.relativeRadius || '-'),
+        '卡片路径: ' + node.relativePath,
+        '\\n--- Markdown 内容 ---\\n',
+        node.content || '无内容'
       ];
       detail.textContent = content.join('\\n');
     }
@@ -181,6 +218,7 @@ function mapHtml() {
       const node = graph.nodes.find(n => n.name.includes(key));
       if (!node) return;
       highlighted = node.id;
+      panel.style.display = 'block';
       pan.x = -node.x + 40;
       pan.y = -node.y + 40;
       showDetail(node);
@@ -194,6 +232,11 @@ function mapHtml() {
       }
     });
     refreshBtn.addEventListener('click', () => loadData());
+    closePanelBtn.addEventListener('click', () => {
+      panel.style.display = 'none';
+      highlighted = null;
+      render();
+    });
 
     svg.addEventListener('wheel', e => {
       e.preventDefault();
@@ -242,6 +285,9 @@ function broadcastReload() {
 
 function setupWatcher() {
   const dir = getGeoRootDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   let timer = null;
   const notify = () => {
     if (timer) {
@@ -255,7 +301,11 @@ function setupWatcher() {
   try {
     fs.watch(dir, { recursive: true }, () => notify());
   } catch (error) {
-    fs.watch(dir, () => notify());
+    try {
+      fs.watch(dir, () => notify());
+    } catch (e) {
+      console.error('Failed to watch directory:', e.message);
+    }
   }
 }
 
@@ -296,6 +346,6 @@ const server = http.createServer(async (req, res) => {
 
 setupWatcher();
 
-server.listen(PORT, () => {
-  console.log(`地理地图服务已启动: http://localhost:${PORT}`);
+server.listen(PORT, '127.0.0.1', () => {
+  console.log(`地理地图服务已启动: http://127.0.0.1:${PORT}`);
 });
