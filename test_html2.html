@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>地理地图</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b1020; color: #e5e7eb; }
+    header { padding: 12px 16px; border-bottom: 1px solid #24324b; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .title { font-size: 18px; font-weight: 600; }
+    .meta { color: #9ca3af; font-size: 12px; }
+    .toolbar { display: flex; gap: 8px; align-items: center; }
+    input { background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 8px; padding: 6px 10px; width: 220px; }
+    button { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+    #canvas { width: 100vw; height: calc(100vh - 58px); overflow: hidden; position: relative; }
+    svg { width: 100%; height: 100%; display: block; }
+    .node { cursor: pointer; }
+    .node text { font-size: 12px; fill: #e5e7eb; pointer-events: none; }
+    .edge-parent { stroke: #60a5fa; stroke-width: 1.5; opacity: .7; }
+    .edge-reference { stroke: #94a3b8; stroke-width: 1; opacity: .35; stroke-dasharray: 4 3; }
+    .panel { position: absolute; top: 14px; right: 14px; width: 420px; max-height: calc(100% - 28px); overflow: auto; background: rgba(17,24,39,.92); border: 1px solid #374151; border-radius: 10px; padding: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+    .panel h3 { margin: 0 0 12px; font-size: 16px; color: #fff; border-bottom: 1px solid #374151; padding-bottom: 8px; }
+    .panel pre { white-space: pre-wrap; word-break: break-word; font-size: 13px; color: #cbd5e1; margin: 0; line-height: 1.6; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .tag { display: inline-block; font-size: 11px; border-radius: 999px; padding: 2px 8px; margin-right: 6px; margin-bottom: 6px; background: #1f2937; border: 1px solid #374151; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="title">地理卡片地图</div>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="toolbar">
+      <input id="keyword" placeholder="搜索地点名（回车）" />
+      <button id="refreshBtn">刷新</button>
+    </div>
+  </header>
+  <div id="canvas">
+    <svg id="svg" viewBox="-1200 -1200 2400 2400">
+      <g id="regionLayer"></g>
+      <g id="edgeLayer"></g>
+      <g id="nodeLayer"></g>
+    </svg>
+    <aside class="panel" id="panel">
+      <h3>节点详情</h3>
+      <pre id="detail">点击任一地点查看详情</pre>
+    </aside>
+  </div>
+  <script>
+    const svg = document.getElementById('svg');
+    const regionLayer = document.getElementById('regionLayer');
+    const edgeLayer = document.getElementById('edgeLayer');
+    const nodeLayer = document.getElementById('nodeLayer');
+    const detail = document.getElementById('detail');
+    const meta = document.getElementById('meta');
+    const keywordInput = document.getElementById('keyword');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    let graph = { nodes: [], edges: [] };
+    let highlighted = null;
+    let pan = { x: 0, y: 0, scale: 1 };
+    let dragging = false;
+    let dragStart = null;
+
+    const typeColor = new Map([
+      ['大陆', '#22d3ee'],
+      ['洲', '#22d3ee'],
+      ['城池', '#a78bfa'],
+      ['城市', '#a78bfa'],
+      ['山脉', '#f59e0b'],
+      ['海域', '#34d399'],
+      ['未分类', '#94a3b8'],
+    ]);
+
+    function colorByType(type) {
+      if (!type) return '#94a3b8';
+      for (const [k, v] of typeColor.entries()) {
+        if (type.includes(k)) return v;
+      }
+      return '#60a5fa';
+    }
+
+    function setViewTransform() {
+      const tx = pan.x;
+      const ty = pan.y;
+      const s = pan.scale;
+      regionLayer.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + s + ')');
+      edgeLayer.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + s + ')');
+      nodeLayer.setAttribute('transform', 'translate(' + tx + ' ' + ty + ') scale(' + s + ')');
+    }
+
+    function render() {
+      regionLayer.innerHTML = '';
+      edgeLayer.innerHTML = '';
+      nodeLayer.innerHTML = '';
+      const nodeIndex = new Map(graph.nodes.map(n => [n.id, n]));
+
+      graph.nodes.forEach(node => {
+        if (node.boundary && node.boundary.length > 0) {
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          p.setAttribute('points', node.boundary.map(k => k[0] + ',' + k[1]).join(' '));
+          p.setAttribute('fill', colorByType(node.type));
+          p.setAttribute('fill-opacity', node.levelDepth <= 2 ? '0.12' : '0.08');
+          p.setAttribute('stroke', colorByType(node.type));
+          p.setAttribute('stroke-opacity', '0.7');
+          p.setAttribute('stroke-width', node.levelDepth <= 1 ? '3' : '1.5');
+          regionLayer.appendChild(p);
+        }
+      });
+
+      graph.edges.forEach(edge => {
+        const source = nodeIndex.get(edge.source);
+        const target = nodeIndex.get(edge.target);
+        if (!source || !target) return;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', source.x);
+        line.setAttribute('y1', source.y);
+        line.setAttribute('x2', target.x);
+        line.setAttribute('y2', target.y);
+        line.setAttribute('class', edge.kind === 'parent' ? 'edge-parent' : 'edge-reference');
+        edgeLayer.appendChild(line);
+      });
+
+      graph.nodes.forEach(node => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'node');
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', node.x);
+        circle.setAttribute('cy', node.y);
+        circle.setAttribute('r', highlighted === node.id ? 14 : 10);
+        circle.setAttribute('fill', colorByType(node.type));
+        circle.setAttribute('stroke', highlighted === node.id ? '#f8fafc' : '#1f2937');
+        circle.setAttribute('stroke-width', highlighted === node.id ? 2.4 : 1.2);
+        g.appendChild(circle);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', node.x + 13);
+        text.setAttribute('y', node.y + 4);
+        text.textContent = node.name;
+        g.appendChild(text);
+
+        g.addEventListener('click', () => {
+          highlighted = node.id;
+          showDetail(node);
+          render();
+        });
+        nodeLayer.appendChild(g);
+      });
+    }
+
+    function showDetail(node) {
+      const content = [
+        '名称: ' + node.name,
+        '类型: ' + (node.type || '未分类'),
+        '父级: ' + (node.parent || '-'),
+        '繁荣度: ' + (node.prosperity ?? '-'),
+        '面积半径: ' + (node.radius ? node.radius.toFixed(2) : '-'),
+        '相对半径: ' + (node.relativeRadius || '-'),
+        '卡片路径: ' + node.relativePath,
+        '\n--- Markdown 内容 ---\n',
+        node.content || '无内容'
+      ];
+      detail.textContent = content.join('\n');
+    }
+
+    async function loadData() {
+      const res = await fetch('/api/geo-data', { cache: 'no-store' });
+      const data = await res.json();
+      graph = data;
+      meta.textContent = '节点 ' + data.nodeCount + ' | 关系 ' + data.edgeCount + ' | 更新时间 ' + new Date(data.generatedAt).toLocaleString();
+      render();
+    }
+
+    function focusByKeyword() {
+      const key = keywordInput.value.trim();
+      if (!key) return;
+      const node = graph.nodes.find(n => n.name.includes(key));
+      if (!node) return;
+      highlighted = node.id;
+      pan.x = -node.x + 40;
+      pan.y = -node.y + 40;
+      showDetail(node);
+      setViewTransform();
+      render();
+    }
+
+    keywordInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        focusByKeyword();
+      }
+    });
+    refreshBtn.addEventListener('click', () => loadData());
+
+    svg.addEventListener('wheel', e => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      pan.scale = Math.min(2.6, Math.max(0.25, pan.scale * delta));
+      setViewTransform();
+    }, { passive: false });
+
+    svg.addEventListener('mousedown', e => {
+      dragging = true;
+      dragStart = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      pan.x += dx;
+      pan.y += dy;
+      dragStart = { x: e.clientX, y: e.clientY };
+      setViewTransform();
+    });
+    window.addEventListener('mouseup', () => {
+      dragging = false;
+    });
+
+    const eventSource = new EventSource('/events');
+    eventSource.onmessage = async event => {
+      if (event.data === 'reload') {
+        await loadData();
+      }
+    };
+    eventSource.onerror = () => {};
+
+    setViewTransform();
+    loadData();
+  </script>
+</body>
+</html>

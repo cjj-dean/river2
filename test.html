@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>地理地图</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1020;color:#e5e7eb}
+header{padding:12px 16px;border-bottom:1px solid #24324b;display:flex;justify-content:space-between;align-items:center}
+#meta{font-size:12px;color:#9ca3af}
+#legend{position:fixed;top:68px;right:14px;background:rgba(8,15,33,.86);border:1px solid #24324b;border-radius:8px;padding:8px 10px;font-size:12px;color:#cbd5e1;line-height:1.45}
+#canvas{width:100vw;height:calc(100vh - 56px)}svg{width:100%;height:100%}
+.e1{stroke:#60a5fa;stroke-width:1.5;opacity:.7}.e2{stroke:#94a3b8;stroke-width:1;opacity:.35;stroke-dasharray:4 3}
+</style></head><body>
+<header><div>地理地图</div><div id="meta"></div></header>
+<div id="legend">层级图例<br/>一级：粗边+大字<br/>二级：中边+中字<br/>三级及以下：细边+小字</div>
+<div id="canvas"><svg id="svg" viewBox="-1700 -1300 3400 2600"><g id="regions"></g><g id="edges"></g><g id="nodes"></g></svg></div>
+<script>
+let g={nodes:[],edges:[]},s='';
+const siblingColorMap=new Map();
+function h(k){let x=0;for(let i=0;i<k.length;i++){x=((x*131)+k.charCodeAt(i))>>>0}return x}
+function c(x){const key=x.parent||x.name||"__root__";if(siblingColorMap.has(key))return siblingColorMap.get(key);const hue=h(key)%360;const col=`hsl(${hue} 76% 58%)`;siblingColorMap.set(key,col);return col}
+function lv(x){const d=x.levelDepth||2; if(d<=1)return {sw:2.8,fo:.16,so:.95,nr:12,fs:15,dx:14,w:'700'}; if(d===2)return {sw:1.8,fo:.10,so:.7,nr:8,fs:12,dx:10,w:'500'}; return {sw:1.1,fo:.07,so:.5,nr:6,fs:10,dx:8,w:'400'};}
+function draw(){const r=document.getElementById("regions"),e=document.getElementById("edges"),n=document.getElementById("nodes");r.innerHTML="";e.innerHTML="";n.innerHTML="";const m=new Map(g.nodes.map(i=>[i.id,i]));
+g.nodes.forEach(x=>{const st=lv(x);const color=c(x);const p=document.createElementNS("http://www.w3.org/2000/svg","polygon");p.setAttribute("points",(x.boundary||[]).map(k=>k[0]+","+k[1]).join(" "));p.setAttribute("fill",color);p.setAttribute("fill-opacity",String(st.fo));p.setAttribute("stroke",color);p.setAttribute("stroke-opacity",String(st.so));p.setAttribute("stroke-width",String(st.sw));r.appendChild(p);});
+g.edges.forEach(x=>{const a=m.get(x.source),b=m.get(x.target);if(!a||!b)return;const l=document.createElementNS("http://www.w3.org/2000/svg","line");l.setAttribute("x1",a.x);l.setAttribute("y1",a.y);l.setAttribute("x2",b.x);l.setAttribute("y2",b.y);l.setAttribute("class",x.kind==="parent"?"e1":"e2");e.appendChild(l)});
+g.nodes.forEach(x=>{const st=lv(x);const color=c(x);const gg=document.createElementNS("http://www.w3.org/2000/svg","g");const p=document.createElementNS("http://www.w3.org/2000/svg","circle");p.setAttribute("cx",x.x);p.setAttribute("cy",x.y);p.setAttribute("r",String(st.nr));p.setAttribute("fill",color);p.setAttribute("stroke","#0f172a");p.setAttribute("stroke-width","1.1");const t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",x.x+st.dx);t.setAttribute("y",x.y+4);t.setAttribute("font-size",String(st.fs));t.setAttribute("font-weight",st.w);t.setAttribute("fill","#e5e7eb");t.textContent=x.name;gg.appendChild(p);gg.appendChild(t);n.appendChild(gg);});}
+async function refresh(){const r=await fetch("/api/geo-data",{cache:"no-store"});const d=await r.json();g=d;document.getElementById("meta").textContent=`节点 ${d.nodeCount} | 关系 ${d.edgeCount} | 更新时间 ${new Date(d.generatedAt).toLocaleString()}`;draw();s=d.generatedAt}
+setInterval(async()=>{const r=await fetch("/api/geo-data",{cache:"no-store"});const d=await r.json();if(d.generatedAt!==s){g=d;document.getElementById("meta").textContent=`节点 ${d.nodeCount} | 关系 ${d.edgeCount} | 更新时间 ${new Date(d.generatedAt).toLocaleString()}`;draw();s=d.generatedAt}},2000);
+refresh();
+</script></body></html>
