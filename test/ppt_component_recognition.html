@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>半自动组件识别流程图</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #edf2f8; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif; }
+    .slide { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 1920px; height: 1080px; overflow: hidden; }
+    .background { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: linear-gradient(180deg, #fbfdff 0%, #f2f6fb 56%, #ecf2f8 100%); }
+    .bg1 { position: absolute; left: 80px; top: 20px; width: 680px; height: 440px; border-radius: 340px; background: radial-gradient(circle, rgba(121,177,255,0.32) 0%, rgba(121,177,255,0) 70%); }
+    .bg2 { position: absolute; left: 1260px; top: 40px; width: 560px; height: 360px; border-radius: 280px; background: radial-gradient(circle, rgba(255,188,206,0.34) 0%, rgba(255,188,206,0) 72%); }
+    .bg3 { position: absolute; left: 1240px; top: 700px; width: 560px; height: 320px; border-radius: 280px; background: radial-gradient(circle, rgba(156,228,209,0.30) 0%, rgba(156,228,209,0) 72%); }
+    .card { position: absolute; background: rgba(255,255,255,0.78); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 24px 58px rgba(148,163,184,0.20); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border-radius: 30px; }
+    .title1 { position: absolute; left: 128px; top: 54px; width: 860px; height: 56px; font-size: 46px; font-weight: 700; color: #12233a; line-height: 56px; }
+    .title2 { position: absolute; left: 130px; top: 118px; width: 1180px; height: 28px; font-size: 19px; color: #607088; line-height: 28px; }
+    .left { position: absolute; left: 96px; top: 186px; width: 900px; height: 838px; }
+    .right { position: absolute; left: 1020px; top: 186px; width: 804px; height: 838px; }
+    .lt1 { position: absolute; left: 142px; top: 218px; width: 280px; height: 34px; font-size: 28px; font-weight: 700; color: #12233a; line-height: 34px; }
+    .lt2 { position: absolute; left: 142px; top: 260px; width: 420px; height: 44px; font-size: 16px; color: #6c7c94; line-height: 22px; }
+    .phone { position: absolute; left: 158px; top: 324px; width: 420px; height: 700px; border-radius: 56px; background: linear-gradient(180deg,#111723 0%,#141d2a 100%); box-shadow: 0 28px 60px rgba(15,23,42,0.28); }
+    .screen { position: absolute; left: 171px; top: 337px; width: 394px; height: 674px; border-radius: 44px; background: linear-gradient(180deg,#f6f8fb 0%,#eff3f8 100%); }
+    .notch { position: absolute; left: 311px; top: 349px; width: 114px; height: 30px; border-radius: 16px; background: #0f172a; }
+    .t { position: absolute; left: 204px; top: 356px; width: 60px; height: 18px; font-size: 14px; font-weight: 600; color: #1f2937; line-height: 18px; }
+    .r { position: absolute; left: 494px; top: 355px; width: 58px; height: 18px; font-size: 13px; color: #1f2937; line-height: 18px; text-align: right; }
+    .st { position: absolute; left: 202px; top: 400px; width: 120px; height: 38px; font-size: 34px; font-weight: 700; color: #111827; line-height: 38px; }
+    .srch { position: absolute; left: 202px; top: 452px; width: 332px; height: 46px; border-radius: 16px; border: 1px solid #d9e1ec; background: rgba(255,255,255,0.92); }
+    .srchtx { position: absolute; left: 224px; top: 465px; width: 120px; height: 20px; font-size: 15px; color: #98a6bb; line-height: 20px; }
+    .acc { position: absolute; left: 202px; top: 512px; width: 332px; height: 132px; border-radius: 22px; border: 1px solid #dde4ef; background: rgba(255,255,255,0.94); box-shadow: 0 12px 24px rgba(148,163,184,0.14); }
+    .accn { position: absolute; left: 272px; top: 532px; width: 160px; height: 22px; font-size: 18px; font-weight: 700; color: #1a2a41; line-height: 22px; }
+    .accs { position: absolute; left: 272px; top: 560px; width: 170px; height: 18px; font-size: 13px; color: #6f7f97; line-height: 18px; }
+    .wifi { position: absolute; left: 202px; top: 660px; width: 332px; height: 54px; border-radius: 16px; border: 1px solid #dde4ef; background: rgba(255,255,255,0.94); }
+    .blue { position: absolute; left: 202px; top: 722px; width: 332px; height: 54px; border-radius: 16px; border: 1px solid #dde4ef; background: rgba(255,255,255,0.94); }
+    .disp { position: absolute; left: 202px; top: 786px; width: 332px; height: 124px; border-radius: 20px; border: 1px solid #dde4ef; background: rgba(255,255,255,0.94); }
+    .note { position: absolute; left: 202px; top: 920px; width: 332px; height: 54px; border-radius: 16px; border: 1px solid #dde4ef; background: rgba(255,255,255,0.94); }
+    .tx1 { position: absolute; left: 226px; top: 677px; width: 120px; height: 20px; font-size: 15px; color: #1f2937; line-height: 20px; }
+    .tx2 { position: absolute; left: 226px; top: 739px; width: 120px; height: 20px; font-size: 15px; color: #1f2937; line-height: 20px; }
+    .tx3 { position: absolute; left: 226px; top: 937px; width: 120px; height: 20px; font-size: 15px; color: #1f2937; line-height: 20px; }
+    .swon { position: absolute; width: 42px; height: 24px; border-radius: 12px; background: #34c759; }
+    .swoff { position: absolute; width: 42px; height: 24px; border-radius: 12px; background: #cbd5e1; }
+    .dot { position: absolute; width: 18px; height: 18px; border-radius: 9px; background: #fff; box-shadow: 0 2px 4px rgba(15,23,42,0.2); }
+    .trk { position: absolute; left: 226px; top: 870px; width: 284px; height: 8px; border-radius: 4px; background: #d7dfea; }
+    .fil { position: absolute; left: 226px; top: 870px; width: 178px; height: 8px; border-radius: 4px; background: linear-gradient(90deg,#4f8cff 0%,#6fb8ff 100%); }
+    .knb { position: absolute; left: 396px; top: 864px; width: 20px; height: 20px; border-radius: 10px; border: 1px solid #d7e0ec; background: #fff; }
+    .box { position: absolute; border: 3px solid rgba(52,120,246,0.95); border-radius: 18px; box-shadow: 0 0 0 8px rgba(106,159,255,0.14); cursor: pointer; }
+    .box.active { border: 3px solid rgba(255,122,69,0.98); box-shadow: 0 0 0 10px rgba(255,161,122,0.18); }
+    .tip { position: absolute; width: 290px; height: 156px; border-radius: 22px; border: 1px solid #dbe3ef; background: rgba(255,255,255,0.95); box-shadow: 0 18px 30px rgba(148,163,184,0.2); opacity: 0.45; }
+    .tip.active { opacity: 1; }
+    .tit { position: absolute; width: 210px; height: 24px; font-size: 17px; font-weight: 700; color: #14263f; line-height: 24px; outline: none; }
+    .attr { position: absolute; width: 240px; height: 58px; font-size: 13px; color: #687892; line-height: 19px; outline: none; white-space: pre-wrap; }
+    .ch1 { position: absolute; width: 88px; height: 24px; border-radius: 12px; background: rgba(52,120,246,0.12); text-align: center; line-height: 24px; font-size: 12px; color: #3478f6; outline: none; }
+    .ch2 { position: absolute; width: 100px; height: 24px; border-radius: 12px; background: rgba(17,24,39,0.08); text-align: center; line-height: 24px; font-size: 12px; color: #5d6d84; outline: none; }
+    .ft1 { position: absolute; left: 1060px; top: 230px; width: 300px; height: 34px; font-size: 28px; font-weight: 700; color: #12233a; line-height: 34px; }
+    .ft2 { position: absolute; left: 1060px; top: 274px; width: 430px; height: 44px; font-size: 16px; color: #6c7c94; line-height: 22px; }
+    .fc { position: absolute; width: 320px; height: 142px; border-radius: 24px; border: 1px solid #dbe3ef; background: rgba(255,255,255,0.92); box-shadow: 0 16px 30px rgba(148,163,184,0.16); }
+    .fn { position: absolute; width: 36px; height: 36px; border-radius: 18px; background: #e4efff; text-align: center; line-height: 36px; font-size: 15px; font-weight: 700; color: #2b5dff; }
+    .fh { position: absolute; width: 210px; height: 24px; font-size: 21px; font-weight: 700; color: #1a2a41; line-height: 24px; }
+    .fd { position: absolute; width: 270px; height: 52px; font-size: 14px; color: #697b93; line-height: 18px; }
+    .lh { position: absolute; height: 4px; border-radius: 2px; background: linear-gradient(90deg,#7eacff 0%,#9fc0ff 100%); }
+    .lv { position: absolute; width: 4px; border-radius: 2px; background: linear-gradient(180deg,#7eacff 0%,#9fc0ff 100%); }
+    .ah { position: absolute; width: 14px; height: 14px; border-right: 4px solid #8db4ff; border-top: 4px solid #8db4ff; transform: rotate(45deg); }
+    .ed { position: absolute; left: 1060px; top: 934px; width: 740px; height: 28px; font-size: 15px; color: #6f7f97; line-height: 28px; }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <div class="background"><div class="bg1"></div><div class="bg2"></div><div class="bg3"></div></div>
+    <div class="title1">半自动组件识别流程图</div>
+    <div class="title2">设置页设计稿自动识别 6+ 常用组件，框选后通过 Tips 标注名称和属性，并支持在 Tips 内直接编辑修改。</div>
+    <div class="card left"></div><div class="card right"></div>
+    <div class="lt1">移动端设置设计稿</div><div class="lt2">点击蓝色框切换组件；对应 Tips 会高亮，文字内容可直接修改。</div>
+    <div class="phone"></div><div class="screen"></div><div class="notch"></div><div class="t">9:41</div><div class="r">5G 96%</div><div class="st">设置</div>
+    <div class="srch"></div><div class="srchtx">搜索</div><div class="acc"></div><div class="accn">Apple ID</div><div class="accs">iCloud、媒体与购买</div>
+    <div class="wifi"></div><div class="blue"></div><div class="disp"></div><div class="note"></div>
+    <div class="tx1">无线局域网</div><div class="tx2">蓝牙</div><div class="tx3">通知</div>
+    <div class="swon" style="left:480px;top:675px;"></div><div class="dot" style="left:502px;top:678px;"></div>
+    <div class="swoff" style="left:480px;top:737px;"></div><div class="dot" style="left:483px;top:740px;"></div>
+    <div class="swon" style="left:480px;top:935px;"></div><div class="dot" style="left:502px;top:938px;"></div>
+    <div class="trk"></div><div class="fil"></div><div class="knb"></div>
+    <div class="box active" id="box-search" style="left:202px;top:452px;width:332px;height:46px;"></div>
+    <div class="box" id="box-account" style="left:202px;top:512px;width:332px;height:132px;"></div>
+    <div class="box" id="box-wifi" style="left:202px;top:660px;width:332px;height:54px;"></div>
+    <div class="box" id="box-blue" style="left:202px;top:722px;width:332px;height:54px;"></div>
+    <div class="box" id="box-display" style="left:202px;top:786px;width:332px;height:124px;"></div>
+    <div class="box" id="box-note" style="left:202px;top:920px;width:332px;height:54px;"></div>
+
+    <div class="tip active" id="tip-search" style="left:500px;top:246px;"></div>
+    <div class="tit" contenteditable="true" style="left:518px;top:264px;">搜索框</div>
+    <div class="attr" contenteditable="true" style="left:518px;top:292px;">type: Input\nplaceholder: 搜索\nradius: 16</div>
+    <div class="ch1" contenteditable="true" style="left:518px;top:366px;">Input</div>
+    <div class="ch2" contenteditable="true" style="left:614px;top:366px;">46 × 332</div>
+
+    <div class="tip" id="tip-account" style="left:500px;top:418px;"></div>
+    <div class="tit" contenteditable="true" style="left:518px;top:436px;">账户卡片</div>
+    <div class="attr" contenteditable="true" style="left:518px;top:464px;">type: Card\navatar: true\nstatus: 已登录</div>
+    <div class="ch1" contenteditable="true" style="left:518px;top:538px;">Card</div>
+    <div class="ch2" contenteditable="true" style="left:614px;top:538px;">132 × 332</div>
+
+    <div class="tip" id="tip-wifi" style="left:500px;top:590px;"></div>
+    <div class="tit" contenteditable="true" style="left:518px;top:608px;">WiFi 行</div>
+    <div class="attr" contenteditable="true" style="left:518px;top:636px;">type: Row\ntrailing: Switch\nstate: On</div>
+    <div class="ch1" contenteditable="true" style="left:518px;top:710px;">Row</div>
+    <div class="ch2" contenteditable="true" style="left:614px;top:710px;">54 × 332</div>
+
+    <div class="tip" id="tip-blue" style="left:500px;top:762px;"></div>
+    <div class="tit" contenteditable="true" style="left:518px;top:780px;">蓝牙行</div>
+    <div class="attr" contenteditable="true" style="left:518px;top:808px;">type: Row\ntrailing: Switch\nstate: Off</div>
+    <div class="ch1" contenteditable="true" style="left:518px;top:882px;">Row</div>
+    <div class="ch2" contenteditable="true" style="left:614px;top:882px;">54 × 332</div>
+
+    <div class="tip" id="tip-display" style="left:790px;top:330px;"></div>
+    <div class="tit" contenteditable="true" style="left:808px;top:348px;">亮度卡片</div>
+    <div class="attr" contenteditable="true" style="left:808px;top:376px;">type: Slider Card\nvalue: 63%\nsub-items: 2</div>
+    <div class="ch1" contenteditable="true" style="left:808px;top:450px;">Slider</div>
+    <div class="ch2" contenteditable="true" style="left:904px;top:450px;">124 × 332</div>
+
+    <div class="tip" id="tip-note" style="left:790px;top:502px;"></div>
+    <div class="tit" contenteditable="true" style="left:808px;top:520px;">通知行</div>
+    <div class="attr" contenteditable="true" style="left:808px;top:548px;">type: Row\ntrailing: Switch\nstate: On</div>
+    <div class="ch1" contenteditable="true" style="left:808px;top:622px;">Row</div>
+    <div class="ch2" contenteditable="true" style="left:904px;top:622px;">54 × 332</div>
+
+    <div class="ft1">半自动识别流程</div><div class="ft2">自动识别 + 人工校对 + 就地编辑，确保组件信息可直接沉淀和复用。</div>
+    <div class="fc" style="left:1060px;top:338px;"></div><div class="fn" style="left:1080px;top:356px;">01</div><div class="fh" style="left:1130px;top:362px;">导入设计稿</div><div class="fd" style="left:1082px;top:400px;">输入设置页视觉稿，系统自动建立画布坐标与识别上下文。</div>
+    <div class="fc" style="left:1420px;top:338px;"></div><div class="fn" style="left:1440px;top:356px;">02</div><div class="fh" style="left:1490px;top:362px;">自动框选组件</div><div class="fd" style="left:1442px;top:400px;">识别输入框、卡片、列表、开关、滑杆等常见组件边界。</div>
+    <div class="fc" style="left:1060px;top:516px;"></div><div class="fn" style="left:1080px;top:534px;">03</div><div class="fh" style="left:1130px;top:540px;">Tips 标注属性</div><div class="fd" style="left:1082px;top:578px;">给组件标注名称、类型、尺寸和关键属性，形成清晰对照。</div>
+    <div class="fc" style="left:1420px;top:516px;"></div><div class="fn" style="left:1440px;top:534px;">04</div><div class="fh" style="left:1490px;top:540px;">Tips 内编辑</div><div class="fd" style="left:1442px;top:578px;">在 Tips 文字区域直接编辑，完成组件命名和属性修订。</div>
+    <div class="fc" style="left:1240px;top:694px;width:400px;height:142px;"></div><div class="fn" style="left:1260px;top:712px;">05</div><div class="fh" style="left:1310px;top:718px;width:300px;">输出结构化组件数据</div><div class="fd" style="left:1262px;top:756px;width:350px;">输出可用于组件库沉淀、研发对接与低代码生成的数据结构。</div>
+    <div class="lh" style="left:1384px;top:406px;width:34px;"></div><div class="ah" style="left:1410px;top:399px;"></div>
+    <div class="lv" style="left:1590px;top:480px;height:34px;"></div><div class="ah" style="left:1583px;top:504px;transform:rotate(135deg);"></div>
+    <div class="lh" style="left:1384px;top:584px;width:34px;"></div><div class="ah" style="left:1410px;top:577px;"></div>
+    <div class="lv" style="left:1430px;top:660px;height:34px;"></div><div class="ah" style="left:1423px;top:684px;transform:rotate(135deg);"></div>
+    <div class="ed">交互说明：点击蓝色框切换当前组件；对应 Tips 高亮，并可直接编辑其文本内容。</div>
+  </div>
+
+  <script>
+    const pairs = [['box-search','tip-search'],['box-account','tip-account'],['box-wifi','tip-wifi'],['box-blue','tip-blue'],['box-display','tip-display'],['box-note','tip-note']];
+    function activate(id){
+      pairs.forEach(([b,t]) => {
+        document.getElementById(b).classList.toggle('active', b === id);
+        document.getElementById(t).classList.toggle('active', b === id);
+      });
+    }
+    pairs.forEach(([b]) => document.getElementById(b).addEventListener('click', () => activate(b)));
+  </script>
+</body>
+</html>
