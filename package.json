@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node src/test.js",
-    "map": "node src/geoMap/server.js"
+    "map": "node src/geoMap/server.js",
+    "count:chars": "node scripts/count-project-chars.js"
   },
   "keywords": ["mcp", "novel", "setting", "ai", "agent"],
   "author": "",
