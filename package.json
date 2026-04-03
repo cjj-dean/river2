@@ -11,7 +11,9 @@
     "start": "node src/index.js",
     "test": "node src/test.js",
     "map": "node src/geoMap/server.js",
-    "count:chars": "node scripts/count-project-chars.js"
+    "count:chars": "node scripts/count-project-chars.js",
+    "merge:skills": "node scripts/merge-skills.js",
+    "merge:writing-skills": "node scripts/merge-skills.js \"settings/base/new/skill/小说描写\""
   },
   "keywords": ["mcp", "novel", "setting", "ai", "agent"],
   "author": "",
